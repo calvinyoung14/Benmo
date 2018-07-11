@@ -1,0 +1,172 @@
+import socket
+import errno
+from socket import error as sock_err
+import random
+import sys
+import time
+import threading
+from threading import Thread, BoundedSemaphore
+import json
+
+pollName = int(sys.argv[1])
+
+UDP_IP = "127.0.0.1"
+UDP_PORT = 5000 + pollName
+
+
+#with open('init.txt') as f:
+ #   lines = f.readlines()
+
+#lines = [x.strip() for x in lines]
+
+#TCP_IP = lines[0]
+
+#if(pollName == '1'):
+#elif(pollName == '2'):
+#elif(pollName == '3'):
+
+print("Input format: (vote A/B, printDict, printLog, printTable)")
+
+majority = 2
+ackPrepCounter = 0
+sender = None
+
+ballotNum = [0,pollName,0]
+acceptNum = [0,0,0]
+acceptVal = None
+
+serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+serverSocket.bind(('',UDP_PORT))
+
+def getNewBallot():
+    global ballotNum
+    ballotNum[0]+=1
+    ballotNum[1] = pollName
+    #ballotNum[3] #has to be updated
+
+
+def propose(): #some value (queue/block)
+    #while(ackPrepCounter < majority):
+    if (1):
+        getNewBallot()
+        th1 = Thread(target = sendThread("prepare", None))
+        th1.start()
+        time.sleep(random.randint(1,6))
+
+
+def ackPropose(ipport, bal):
+    if(bal[0] > ballotNum[0]):
+        ballotNum[0] = bal[0]
+        ballotNum[1] = bal[1]
+        #depth?!
+        th1 = Thread(target = sendThread("ackPrep", ipport))
+        th1.start()
+
+    elif(bal[0] == ballotNum[0]):
+        if(bal[1] >= ballotNum[1]):
+            ballotNum[0] = bal[0]
+            ballotNum[1] = bal[1]
+            #depth?!
+            th1 = Thread(target = sendThread("ackPrep", ipport))
+            th1.start() 
+        else:
+            print("rejected1")
+    else:
+        print("rejected0")
+
+def accept(balN, b, val): #some val
+   print("KEK") 
+
+def ackAccept():
+    print("yee")
+
+
+def readLog():
+    with open('config/log' + pollName + '.txt', "r") as dFile:
+        logSema.acquire()
+        for line in dFile:
+            parts = line.split(", ")
+            log.append([parts[0], parts[1], int(parts[2])])
+        logSema.release()
+def printLog():
+    print(log)
+def writeLog():
+     with  open('config/log' + pollName +'.txt', "w") as dFile:
+        for vote in log:
+             dFile.write(', '.join(map(str, vote)) + '\n') ##lol gotta format
+
+
+
+
+def serverThread():
+    global serverSocket
+    global ackPrepCounter
+    while True:
+        print("waiting")
+        data, addr = serverSocket.recvfrom(1024)
+        print(data)
+        print("i got it")
+        msg_decode = data.decode('utf-8')
+        load_msg = json.loads(msg_decode)
+        if(load_msg[0] == "prepare"):
+            print("--Replying to Prep--")
+            ackPropose(addr, load_msg[2])
+        
+        elif(load_msg[0] == 'ackP'):
+            ackPrepCounter+=1
+            print(ackPrepCounter)
+            if(ackPrepCounter == majority):
+                print("phase 2: accept")
+                accept(load_msg[1],load_msg[2],load_msg[3])
+        else:
+            print("REEEEEEEE")
+        print("msg recv: ", load_msg)
+        
+       
+   
+
+def sendThread(sendType, ackIPPort):
+    global serverSocket
+    #sock.bind(('',UDP_PORT+1000))
+    if(sendType == "prepare"):
+        dump_msg = json.dumps(('prepare', UDP_PORT, ballotNum))
+        MESSAGE = bytes(dump_msg, "utf-8")
+        for i in range(1, 6):
+            serverSocket.sendto(MESSAGE, (UDP_IP,5000+i)) #will have to be updated
+
+    elif(sendType == "ackPrep"):
+        print("-Actually Sending ackPrep-")
+        print(ackIPPort)
+        dump_msg = json.dumps(('ackP', ballotNum, acceptNum, acceptVal))
+        MESSAGE = bytes(dump_msg, "utf-8")
+        i = serverSocket.sendto(MESSAGE, ackIPPort)
+        print(i)
+    
+
+
+##BEGINING OF PROGRAM
+
+th0 = Thread(target=serverThread)
+th0.start()
+
+while(True):
+    
+    #send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+    
+    command = input("Action to Take: ")
+    c_arr = command.split(" ")
+
+    if (c_arr[0] ==  "pay"):
+        if(int(c_arr[2]) > 0 and int(c_arr[2]) <= 5):
+            propose()
+        else:
+            print("Not a valid candidate")
+    elif (c_arr[0] == "exit"):
+        #MORE TODO
+        print("EXITING")
+        endFlag = 1
+        print(threading.enumerate())
+        sys.exit(0)
+    else:
+        print("Not a valid command")

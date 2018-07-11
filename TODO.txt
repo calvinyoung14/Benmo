@@ -1,0 +1,28 @@
+TODO
+
+
+CRASH FAILURE / NETWORK FAILURE / OPENSTACK / TESTING
+
+CRASH FAILURE: write bc, queue, paxos, into json and save to disk, load from disk, run function to read json CAN MAKE INIT FUNCT READ FORM JSON
+
+Save
+	Queue DONZO
+	Blockchain DONZO
+	States of Paxos
+	Money DONZO
+
+
+
+
+
+NETWORK FAILURE: KEEP A HASHTABLE OF WHO YOU CAN CONNECT TO, THEIR # AS KEY, BOOL AS VAL
+IF VAL 0 - skip send, if val 1 just send
+
+OPENSTACK: ??????
+
+
+TESTING:
+
+
+PROB?
+extra spend problem
